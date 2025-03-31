@@ -1,0 +1,55 @@
+/* SVG背景动画 */
+.float-path {
+    fill: url(#gradient);
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+/* 标题浮动动画 */
+.animate-float {
+    animation: float-text 3s ease-in-out infinite;
+}
+
+@keyframes float-text {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+/* 工具卡片悬停效果 */
+.tool-card:hover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, rgba(74, 108, 247, 0.1) 0%, transparent 70%);
+    z-index: -1;
+}
+
+/* 导航指示器动画 */
+.nav-indicator {
+    animation: scaleIn 0.3s ease-out;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
+    }
+}
+
