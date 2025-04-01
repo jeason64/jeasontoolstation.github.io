@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微积分工具</title>
+    <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="./css/themes.css">
+</head>
+<body>
+    <div class="calculator-container">
+        <h1>微积分工具</h1>
+        
+        <div class="calculus-tabs">
+            <button class="tab-btn active" data-tab="derivative">求导</button>
+            <button class="tab-btn" data-tab="integral">积分</button>
+            <button class="tab-btn" data-tab="limit">极限</button>
+        </div>
+        
+        <div class="calculus-content">
+            <!-- 求导面板 -->
+            <div id="derivative" class="tab-panel active">
+                <div class="input-group">
+                    <label>函数表达式: <input type="text" id="deriv-expr" placeholder="例如: x^2 + sin(x)"></label>
+                    <label>对变量求导: <input type="text" id="deriv-var" value="x" size="1"></label>
+                    <button id="calculate-deriv">计算导数</button>
+                </div>
+                <div class="result-display">
+                    <h3>结果:</h3>
+                    <div id="deriv-result"></div>
+                </div>
+            </div>
+            
+            <!-- 积分面板 -->
+            <div id="integral" class="tab-panel">
+                <div class="input-group">
+                    <label>函数表达式: <input type="text" id="integral-expr" placeholder="例如: 2x + cos(x)"></label>
+                    <label>积分变量: <input type="text" id="integral-var" value="x" size="1"></label>
+                    <div>
+                        <label>从: <input type="text" id="integral-from" placeholder="下限"></label>
+                        <label>到: <input type="text" id="integral-to" placeholder="上限 (留空为不定积分)"></label>
+                    </div>
+                    <button id="calculate-integral">计算积分</button>
+                </div>
+                <div class="result-display">
+                    <h3>结果:</h3>
+                    <div id="integral-result"></div>
+                </div>
+            </div>
+            
+            <!-- 极限面板 -->
+            <div id="limit" class="tab-panel">
+                <div class="input-group">
+                    <label>函数表达式: <input type="text" id="limit-expr" placeholder="例如: (sin(x)/x)"></label>
+                    <label>当变量: <input type="text" id="limit-var" value="x" size="1"></label>
+                    <label>趋近于: <input type="text" id="limit-approach" placeholder="例如: 0 或 inf"></label>
+                    <button id="calculate-limit">计算极限</button>
+                </div>
+                <div class="result-display">
+                    <h3>结果:</h3>
+                    <div id="limit-result"></div>
+                </div>
+            </div>
+        </div>
+        
+        <a href="index.html" class="back-link">返回主计算器</a>
+    </div>
+
+    <script src="./js/calculus.js"></script>
+</body>
+</html>

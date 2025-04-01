@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科学计算器</title>
+    <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="./css/themes.css">
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="settings-panel">
+            <div class="precision-control">
+                <label for="integer-digits">整数位数:</label>
+                <input type="number" id="integer-digits" min="1" value="9999">
+                
+                <label for="decimal-digits">小数位数:</label>
+                <input type="number" id="decimal-digits" min="0" value="9999">
+                
+                <select id="theme-selector">
+                    <option value="light">浅色主题</option>
+                    <option value="dark">深色主题</option>
+                </select>
+            </div>
+            
+            <div class="tool-links">
+                <a href="matrix.html" class="tool-link">矩阵计算器</a>
+                <a href="calculus.html" class="tool-link">微积分工具</a>
+                <a href="constants.html" class="tool-link">常数库</a>
+            </div>
+        </div>
+        
+        <div class="display-area">
+            <div class="history-panel"></div>
+            <div class="main-display">
+                <div class="expression"></div>
+                <div class="result"></div>
+            </div>
+        </div>
+        
+        <div class="keypad">
+            <!-- 基础运算按钮 -->
+            <div class="basic-operations">
+                <button class="fn-btn" data-fn="clear">C</button>
+                <button class="fn-btn" data-fn="backspace">⌫</button>
+                <button class="const-btn" data-const="pi">π</button>
+                <button class="const-btn" data-const="e">e</button>
+                
+                <button data-val="7">7</button>
+                <button data-val="8">8</button>
+                <button data-val="9">9</button>
+                <button data-op="÷">÷</button>
+                
+                <button data-val="4">4</button>
+                <button data-val="5">5</button>
+                <button data-val="6">6</button>
+                <button data-op="×">×</button>
+                
+                <button data-val="1">1</button>
+                <button data-val="2">2</button>
+                <button data-val="3">3</button>
+                <button data-op="-">-</button>
+                
+                <button data-val="0">0</button>
+                <button data-val=".">.</button>
+                <button class="fn-btn" data-fn="equals">=</button>
+                <button data-op="+">+</button>
+            </div>
+            
+            <!-- 高级运算按钮 -->
+            <div class="advanced-operations">
+                <button class="fn-btn" data-fn="pow">x^y</button>
+                <button class="fn-btn" data-fn="sqrt">√x</button>
+                <button class="fn-btn" data-fn="fact">x!</button>
+                <button class="fn-btn" data-fn="sin">sin</button>
+                <button class="fn-btn" data-fn="cos">cos</button>
+                
+                <button class="fn-btn" data-fn="log">log</button>
+                <button class="fn-btn" data-fn="ln">ln</button>
+                <button class="fn-btn" data-fn="tan">tan</button>
+                <button class="fn-btn" data-fn="asin">asin</button>
+                <button class="fn-btn" data-fn="acos">acos</button>
+                
+                <button class="fn-btn" data-fn="exp">e^x</button>
+                <button class="fn-btn" data-fn="mod">mod</button>
+                <button class="fn-btn" data-fn="abs">|x|</button>
+                <button class="fn-btn" data-fn="floor">floor</button>
+                <button class="fn-btn" data-fn="ceil">ceil</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./js/calculator.js"></script>
+</body>
+</html>
