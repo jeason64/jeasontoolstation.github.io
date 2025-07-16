@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>按钮求和与对称点阵图</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 10px;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .sum-display {
+            font-size: 1.5rem;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        .input-container {
+            margin: 15px 0;
+        }
+        input {
+            padding: 8px;
+            font-size: 1rem;
+            width: 80%;
+            max-width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            min-width: 15%;
+            max-width: 100%;
+            flex-grow: 1;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.selected {
+            background-color: #f44336;
+        }
+        .matrix-container {
+            display: flex;
+            justify-content: space-between;
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .dot-matrix {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .dot-row {
+            display: flex;
+            justify-content: center;
+            height: 12px; /* 将被JavaScript覆盖 */
+        }
+        .dot {
+            width: 10px; /* 将被JavaScript覆盖 */
+            height: 10px; /* 将被JavaScript覆盖 */
+            margin: 1px; /* 将被JavaScript覆盖 */
+            background-color: transparent;
+            position: relative;
+        }
+        .dot::after {
+            content: '';
+            position: absolute;
+            width: 10px; /* 将被JavaScript覆盖 */
+            height: 10px; /* 将被JavaScript覆盖 */
+            border-radius: 50%;
+            background-color: black;
+            display: none;
+        }
+        .dot.active::after {
+            display: block;
+        }
+        .dot.always-on::after {
+            display: none !important; /* 防止C点伪元素显示 */
+        }
+        .adjustment-container {
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .adjustment-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .adjustment-item label {
+            font-size: 0.9rem;
+        }
+        .adjustment-item input {
+            width: 60px;
+            padding: 5px;
+        }
+        @media (max-width: 600px) {
+            button {
+                padding: 6px 8px;
+                font-size: 0.8rem;
+            }
+            .sum-display {
+                font-size: 1.2rem;
+            }
+            .adjustment-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sum-display">总和: <span id="sum">0</span></div>
+    <div class="input-container">
+        <input type="number" id="targetSum" placeholder="输入总和数字自动点亮按钮">
+        <button onclick="highlightButtons()" style="margin-top: 8px; padding: 8px 16px;">点亮对应按钮</button>
+    </div>
+    <div class="button-container">
+        <div class="button-row">
+            <button value="2">2</button>
+            <button value="4">4</button>
+            <button value="64">64</button>
+            <button value="1024">1024</button>
+            <button value="16384">16384</button>
+        </div>
+        <div class="button-row">
+            <button value="1">1</button>
+            <button value="8">8</button>
+            <button value="128">128</button>
+            <button value="2048">2048</button>
+            <button value="32768">32768</button>
+        </div>
+        <div class="button-row">
+            <button value="0">0</button>
+            <button value="16">16</button>
+            <button value="256">256</button>
+            <button value="4096">4096</button>
+            <button value="65536">65536</button>
+        </div>
+        <div class="button-row">
+            <button value="0">0</button>
+            <button value="32">32</button>
+            <button value="512">512</button>
+            <button value="8192">8192</button>
+            <button value="131072">131072</button>
+        </div>
+    </div>
+    <div class="matrix-container">
+        <div class="dot-matrix" id="leftMatrix"></div>
+        <div class="dot-matrix" id="rightMatrix"></div>
+    </div>
+    <div class="adjustment-container">
+        <div class="adjustment-item">
+            <label for="dotSize">点大小:</label>
+            <input type="number" id="dotSize" min="4" max="20" value="10">
+            <button onclick="updateDotStyle()">应用</button>
+        </div>
+        <div class="adjustment-item">
+            <label for="dotMargin">点间距:</label>
+            <input type="number" id="dotMargin" min="0" max="10" step="0.1" value="1">
+            <button onclick="updateDotStyle()">应用</button>
+        </div>
+    </div>
+
+    <script>
+        let total = 0;
+        const buttons = document.querySelectorAll('.button-container button');
+        const sumDisplay = document.getElementById('sum');
+        let currentDotSize = 10;
+        let currentDotMargin = 1;
+
+        function initializeDotMatrix() {
+            const leftMatrix = document.getElementById('leftMatrix');
+            leftMatrix.innerHTML = '';
+            const dotLayout = [
+                ['A', '2', '4', '64', '1024', '16384'],
+                ['A', '1', '8', '128', '2048', '32768'],
+                ['B', 'C', '16', '256', '4096', '65536'],
+                ['C', 'B', '32', '512', '8192', '131072']
+            ];
+
+            dotLayout.forEach((row, rowIndex) => {
+                const dotRow = document.createElement('div');
+                dotRow.className = 'dot-row';
+                dotRow.style.height = `${currentDotSize + currentDotMargin * 2}px`;
+
+                row.forEach((dotType, colIndex) => {
+                    const dot = document.createElement('div');
+                    dot.className = 'dot';
+                    dot.style.width = `${currentDotSize}px`;
+                    dot.style.height = `${currentDotSize}px`;
+                    dot.style.margin = `${currentDotMargin}px`;
+                    dot.dataset.row = rowIndex;
+                    dot.dataset.col = colIndex;
+
+                    if (dotType === 'A') {
+                        if (rowIndex === 0) {
+                            // 上圆点
+                            const topDot = document.createElement('div');
+                            topDot.style.position = 'absolute';
+                            topDot.style.width = `${currentDotSize}px`;
+                            topDot.style.height = `${currentDotSize}px`;
+                            topDot.style.top = `${currentDotMargin}px`; // 对齐row=0数字点圆心
+                            topDot.style.borderRadius = '50%';
+                            topDot.style.backgroundColor = 'black';
+                            topDot.style.display = 'block';
+                            dot.appendChild(topDot);
+
+                            // 中间长方形
+                            const rect = document.createElement('div');
+                            rect.style.position = 'absolute';
+                            rect.style.width = `${currentDotSize}px`;
+                            rect.style.height = `${currentDotSize + 2 * currentDotMargin}px`; // 圆心间距
+                            rect.style.top = `${currentDotMargin + currentDotSize/2}px`; // 从row=0圆心
+                            rect.style.backgroundColor = 'black';
+                            rect.style.display = 'block';
+                            dot.appendChild(rect);
+
+                            dot.dataset.type = 'A';
+                        } else if (rowIndex === 1) {
+                            // 下圆点
+                            const bottomDot = document.createElement('div');
+                            bottomDot.style.position = 'absolute';
+                            bottomDot.style.width = `${currentDotSize}px`;
+                            bottomDot.style.height = `${currentDotSize}px`;
+                            bottomDot.style.top = `${currentDotMargin}px`; // 对齐row=1数字点圆心
+                            bottomDot.style.borderRadius = '50%';
+                            bottomDot.style.backgroundColor = 'black';
+                            bottomDot.style.display = 'block';
+                            dot.appendChild(bottomDot);
+
+                            dot.dataset.type = 'A';
+                        }
+                        dotRow.appendChild(dot);
+                    } else if (dotType === 'B') {
+                        dotRow.appendChild(dot);
+                    } else if (dotType === 'C') {
+                        const after = document.createElement('div');
+                        after.style.position = 'absolute';
+                        after.style.width = `${currentDotSize}px`;
+                        after.style.height = `${currentDotSize}px`;
+                        after.style.borderRadius = '50%';
+                        after.style.backgroundColor = 'black';
+                        after.style.top = `${currentDotMargin}px`;
+                        after.style.display = 'block';
+                        dot.appendChild(after);
+                        dot.classList.add('always-on');
+                        dot.dataset.type = 'C';
+                        dotRow.appendChild(dot);
+                    } else if (!isNaN(dotType)) {
+                        const after = document.createElement('div');
+                        after.style.position = 'absolute';
+                        after.style.width = `${currentDotSize}px`;
+                        after.style.height = `${currentDotSize}px`;
+                        after.style.borderRadius = '50%';
+                        after.style.backgroundColor = 'black';
+                        after.style.top = `${currentDotMargin}px`;
+                        after.style.display = 'none';
+                        dot.appendChild(after);
+                        dot.dataset.value = dotType;
+                        dotRow.appendChild(dot);
+                    }
+                });
+                leftMatrix.appendChild(dotRow);
+            });
+
+            createSymmetricalMatrix();
+        }
+
+        function createSymmetricalMatrix() {
+            const leftMatrix = document.getElementById('leftMatrix');
+            const rightMatrix = document.getElementById('rightMatrix');
+            rightMatrix.innerHTML = '';
+
+            const leftRows = Array.from(leftMatrix.querySelectorAll('.dot-row'));
+            const reversedRows = [...leftRows].reverse();
+
+            reversedRows.forEach((leftRow, rowIndex) => {
+                const rightRow = document.createElement('div');
+                rightRow.className = 'dot-row';
+                rightRow.style.height = `${currentDotSize + currentDotMargin * 2}px`;
+
+                const leftDots = Array.from(leftRow.children).reverse();
+                leftDots.forEach((leftDot, colIndex) => {
+                    const rightDot = leftDot.cloneNode(true);
+                    rightDot.style.width = `${currentDotSize}px`;
+                    rightDot.style.height = `${currentDotSize}px`;
+                    rightDot.style.margin = `${currentDotMargin}px`;
+
+                    if (rightDot.dataset.type === 'A') {
+                        const children = rightDot.querySelectorAll('div');
+                        children.forEach(child => {
+                            child.style.width = `${currentDotSize}px`;
+                            if (child.style.borderRadius === '50%') {
+                                // 圆点
+                                child.style.height = `${currentDotSize}px`;
+                                child.style.top = `${currentDotMargin}px`; // 对齐row=3或row=2圆心
+                                child.style.display = 'block';
+                            } else {
+                                // 长方形
+                                child.style.height = `${currentDotSize + 2 * currentDotMargin}px`; // 圆心间距
+                                child.style.top = `-${currentDotMargin + currentDotSize/2}px`; // 从row=3圆心
+                                child.style.display = 'block';
+                            }
+                        });
+                    } else if (rightDot.dataset.type === 'C') {
+                        const after = rightDot.querySelector('div');
+                        if (after) {
+                            after.style.width = `${currentDotSize}px`;
+                            after.style.height = `${currentDotSize}px`;
+                            after.style.borderRadius = '50%';
+                            after.style.top = `${currentDotMargin}px`;
+                            after.style.display = 'block';
+                        }
+                    } else if (rightDot.dataset.value) {
+                        const after = rightDot.querySelector('div');
+                        if (after) {
+                            after.style.width = `${currentDotSize}px`;
+                            after.style.height = `${currentDotSize}px`;
+                            after.style.top = `${currentDotMargin}px`;
+                            if (leftDot.querySelector('div').style.display === 'block') {
+                                after.style.display = 'block';
+                            }
+                        }
+                    }
+                    rightRow.appendChild(rightDot);
+                });
+                rightMatrix.appendChild(rightRow);
+            });
+        }
+
+        function updateDotMatrix() {
+            document.querySelectorAll('.dot[data-value] div').forEach(dot => {
+                dot.style.display = 'none';
+            });
+
+            buttons.forEach(button => {
+                if (button.classList.contains('selected')) {
+                    const value = button.value;
+                    document.querySelectorAll(`.dot[data-value="${value}"] div`).forEach(dot => {
+                        dot.style.display = 'block';
+                    });
+                }
+            });
+
+            updateSymmetricalMatrix();
+        }
+
+        function updateSymmetricalMatrix() {
+            const leftMatrix = document.getElementById('leftMatrix');
+            const rightMatrix = document.getElementById('rightMatrix');
+            rightMatrix.innerHTML = '';
+
+            const leftRows = Array.from(leftMatrix.querySelectorAll('.dot-row'));
+            const reversedRows = [...leftRows].reverse();
+
+            reversedRows.forEach((leftRow, rowIndex) => {
+                const rightRow = document.createElement('div');
+                rightRow.className = 'dot-row';
+                rightRow.style.height = `${currentDotSize + currentDotMargin * 2}px`;
+
+                const leftDots = Array.from(leftRow.children).reverse();
+                leftDots.forEach((leftDot, colIndex) => {
+                    const rightDot = leftDot.cloneNode(true);
+                    rightDot.style.width = `${currentDotSize}px`;
+                    rightDot.style.height = `${currentDotSize}px`;
+                    rightDot.style.margin = `${currentDotMargin}px`;
+
+                    if (rightDot.dataset.type === 'A') {
+                        const children = rightDot.querySelectorAll('div');
+                        children.forEach(child => {
+                            child.style.width = `${currentDotSize}px`;
+                            if (child.style.borderRadius === '50%') {
+                                // 圆点
+                                child.style.height = `${currentDotSize}px`;
+                                child.style.top = `${currentDotMargin}px`; // 对齐row=3或row=2圆心
+                                child.style.display = 'block';
+                            } else {
+                                // 长方形
+                                child.style.height = `${currentDotSize + 2 * currentDotMargin}px`; // 圆心间距
+                                child.style.top = `-${currentDotMargin + currentDotSize/2}px`; // 从row=3圆心
+                                child.style.display = 'block';
+                            }
+                        });
+                    } else if (rightDot.dataset.type === 'C') {
+                        const after = rightDot.querySelector('div');
+                        if (after) {
+                            after.style.width = `${currentDotSize}px`;
+                            after.style.height = `${currentDotSize}px`;
+                            after.style.borderRadius = '50%';
+                            after.style.top = `${currentDotMargin}px`;
+                            after.style.display = 'block';
+                        }
+                    } else if (rightDot.dataset.value) {
+                        const after = rightDot.querySelector('div');
+                        if (after) {
+                            after.style.width = `${currentDotSize}px`;
+                            after.style.height = `${currentDotSize}px`;
+                            after.style.top = `${currentDotMargin}px`;
+                            if (leftDot.querySelector('div').style.display === 'block') {
+                                after.style.display = 'block';
+                            }
+                        }
+                    }
+                    rightRow.appendChild(rightDot);
+                });
+                rightMatrix.appendChild(rightRow);
+            });
+        }
+
+        function updateDotStyle() {
+            const newSize = parseInt(document.getElementById('dotSize').value);
+            const newMargin = parseFloat(document.getElementById('dotMargin').value);
+
+            if (isNaN(newSize) || newSize < 4 || newSize > 20) {
+                alert("点大小必须在4-20之间");
+                return;
+            }
+            if (isNaN(newMargin) || newMargin < 0 || newMargin > 10) {
+                alert("点间距必须在0-10之间");
+                return;
+            }
+
+            currentDotSize = newSize;
+            currentDotMargin = newMargin;
+
+            initializeDotMatrix();
+            updateDotMatrix();
+        }
+
+        buttons.forEach(button => {
+            button.addEventListener('click', function() {
+                const value = parseInt(this.value);
+                const isSelected = this.classList.contains('selected');
+
+                if (isSelected) {
+                    total -= value;
+                    this.classList.remove('selected');
+                } else {
+                    total += value;
+                    this.classList.add('selected');
+                }
+
+                sumDisplay.textContent = total;
+                updateDotMatrix();
+            });
+        });
+
+        function highlightButtons() {
+            const targetSum = parseInt(document.getElementById('targetSum').value);
+            if (isNaN(targetSum)) {
+                alert("请输入有效的数字");
+                return;
+            }
+
+            buttons.forEach(button => {
+                button.classList.remove('selected');
+            });
+            total = 0;
+            sumDisplay.textContent = total;
+
+            const sortedButtons = Array.from(buttons)
+                .map(btn => ({element: btn, value: parseInt(btn.value)}))
+                .sort((a, b) => b.value - a.value);
+
+            let remaining = targetSum;
+            for (const btn of sortedButtons) {
+                if (btn.value === 0) continue;
+                if (btn.value <= remaining) {
+                    btn.element.classList.add('selected');
+                    remaining -= btn.value;
+                    total += btn.value;
+                }
+            }
+
+            sumDisplay.textContent = total;
+            updateDotMatrix();
+
+            if (remaining !== 0) {
+                alert(`无法精确匹配，最接近的总和为: ${total}\n剩余差值: ${remaining}`);
+            }
+        }
+
+        initializeDotMatrix();
+    </script>
+</body>
+</html>
