@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>按钮求和与点阵图（带摄像头识别）</title>
+    <script src="https://docs.opencv.org/4.5.5/opencv.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 10px;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .sum-display {
+            font-size: 1.5rem;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        .input-container {
+            margin: 15px 0;
+        }
+        input {
+            padding: 8px;
+            font-size: 1rem;
+            width: 80%;
+            max-width: 300px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .button-row {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            min-width: 80px;
+            max-width: 100%;
+            flex-grow: 1;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.selected {
+            background-color: #f44336;
+        }
+        .matrix-container {
+            display: flex;
+            justify-content: space-between;
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .button-matrix {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+        }
+        .button-column {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            min-width: 80px;
+        }
+        .dot-matrix {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .dot-row {
+            display: flex;
+            justify-content: center;
+            height: 12px; /* 将被JavaScript覆盖 */
+        }
+        .dot {
+            width: 10px; /* 将被JavaScript覆盖 */
+            height: 10px; /* 将被JavaScript覆盖 */
+            margin: 1px; /* 将被JavaScript覆盖 */
+            background-color: transparent;
+            position: relative;
+        }
+        .dot::after {
+            content: '';
+            position: absolute;
+            width: 10px; /* 将被JavaScript覆盖 */
+            height: 10px; /* 将被JavaScript覆盖 */
+            border-radius: 50%;
+            background-color: black;
+            display: none;
+        }
+        .dot.active::after {
+            display: block;
+        }
+        .dot.always-on::after {
+            display: none !important; /* 防止C点伪元素显示 */
+        }
+        .adjustment-container {
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .adjustment-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .adjustment-item label {
+            font-size: 0.9rem;
+        }
+        .adjustment-item input {
+            width: 60px;
+            padding: 5px;
+        }
+        .camera-container {
+            margin: 20px auto;
+            max-width: 800px;
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        video, canvas {
+            max-width: 320px;
+            max-height: 240px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        @media (max-width: 600px) {
+            button {
+                padding: 6px 8px;
+                font-size: 0.8rem;
+                min-width: 60px;
+            }
+            .sum-display {
+                font-size: 1.2rem;
+            }
+            .adjustment-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .button-matrix {
+                flex-direction: row;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            .button-column {
+                min-width: 60px;
+            }
+            video, canvas {
+                max-width: 100%;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sum-display">总和: <span id="sum">0</span></div>
+    <div class="input-container">
+        <input type="number" id="targetSum" placeholder="输入总和数字自动点亮按钮">
+        <button onclick="highlightButtons()" style="margin-top: 8px; padding: 8px 16px;">点亮对应按钮</button>
+    </div>
+    <div class="button-container">
+        <div class="button-row">
+            <button value="2">2</button>
+            <button value="4">4</button>
+            <button value="64">64</button>
+            <button value="1024">1024</button>
+            <button value="16384">16384</button>
+        </div>
+        <div class="button-row">
+            <button value="1">1</button>
+            <button value="8">8</button>
+            <button value="128">128</button>
+            <button value="2048">2048</button>
+            <button value="32768">32768</button>
+        </div>
+        <div class="button-row">
+            <button value="0">0</button>
+            <button value="16">16</button>
+            <button value="256">256</button>
+            <button value="4096">4096</button>
+            <button value="65536">65536</button>
+        </div>
+        <div class="button-row">
+            <button value="0">0</button>
+            <button value="32">32</button>
+            <button value="512">512</button>
+            <button value="8192">8192</button>
+            <button value="131072">131072</button>
+        </div>
+    </div>
+    <div class="matrix-container">
+        <div class="button-matrix" id="buttonMatrix">
+            <div class="button-column">
+                <button value="1" class="increment">+1</button>
+                <button value="5" class="increment">+5</button>
+            </div>
+            <div class="button-column">
+                <button value="-1" class="increment">-1</button>
+                <button value="-5" class="increment">-5</button>
+            </div>
+        </div>
+        <div class="dot-matrix" id="rightMatrix"></div>
+    </div>
+    <div class="camera-container">
+        <button onclick="startCamera()">启动摄像头</button>
+        <button onclick="stopCamera()">停止摄像头</button>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display: none;"></canvas>
+    </div>
+    <div class="adjustment-container">
+        <div class="adjustment-item">
+            <label for="dotSize">点大小:</label>
+            <input type="number" id="dotSize" min="4" max="20" value="10">
+            <button onclick="updateDotStyle()">应用</button>
+        </div>
+        <div class="adjustment-item">
+            <label for="dotMargin">点间距:</label>
+            <input type="number" id="dotMargin" min="0" max="10" step="0.1" value="1">
+            <button onclick="updateDotStyle()">应用</button>
+        </div>
+    </div>
+
+    <script>
+        let total = 0;
+        const buttons = document.querySelectorAll('.button-container button');
+        const sumDisplay = document.getElementById('sum');
+        const targetSumInput = document.getElementById('targetSum');
+        let currentDotSize = 10;
+        let currentDotMargin = 1;
+        let videoStream = null;
+        let processFrameInterval = null;
+
+        function initializeDotMatrix() {
+            const rightMatrix = document.getElementById('rightMatrix');
+            rightMatrix.innerHTML = '';
+            const dotLayout = [
+                ['A', '2', '4', '64', '1024', '16384'],
+                ['A', '1', '8', '128', '2048', '32768'],
+                ['B', 'C', '16', '256', '4096', '65536'],
+                ['C', 'B', '32', '512', '8192', '131072']
+            ];
+
+            dotLayout.reverse().forEach((row, rowIndex) => {
+                const rightRow = document.createElement('div');
+                rightRow.className = 'dot-row';
+                rightRow.style.height = `${currentDotSize + currentDotMargin * 2}px`;
+
+                row.reverse().forEach((dotType, colIndex) => {
+                    const rightDot = document.createElement('div');
+                    rightDot.className = 'dot';
+                    rightDot.style.width = `${currentDotSize}px`;
+                    rightDot.style.height = `${currentDotSize}px`;
+                    rightDot.style.margin = `${currentDotMargin}px`;
+                    rightDot.dataset.row = rowIndex;
+                    rightDot.dataset.col = colIndex;
+
+                    if (dotType === 'A') {
+                        if (rowIndex === 3) {
+                            const topDot = document.createElement('div');
+                            topDot.style.position = 'absolute';
+                            topDot.style.width = `${currentDotSize}px`;
+                            topDot.style.height = `${currentDotSize}px`;
+                            topDot.style.top = `${currentDotMargin}px`;
+                            topDot.style.borderRadius = '50%';
+                            topDot.style.backgroundColor = 'black';
+                            topDot.style.display = 'block';
+                            rightDot.appendChild(topDot);
+
+                            const rect = document.createElement('div');
+                            rect.style.position = 'absolute';
+                            rect.style.width = `${currentDotSize}px`;
+                            rect.style.height = `${currentDotSize + 2 * currentDotMargin}px`;
+                            rect.style.top = `-${currentDotMargin + currentDotSize/2}px`;
+                            rect.style.backgroundColor = 'black';
+                            rect.style.display = 'block';
+                            rightDot.appendChild(rect);
+
+                            rightDot.dataset.type = 'A';
+                        } else if (rowIndex === 2) {
+                            const bottomDot = document.createElement('div');
+                            bottomDot.style.position = 'absolute';
+                            bottomDot.style.width = `${currentDotSize}px`;
+                            bottomDot.style.height = `${currentDotSize}px`;
+                            bottomDot.style.top = `${currentDotMargin}px`;
+                            bottomDot.style.borderRadius = '50%';
+                            bottomDot.style.backgroundColor = 'black';
+                            bottomDot.style.display = 'block';
+                            rightDot.appendChild(bottomDot);
+
+                            rightDot.dataset.type = 'A';
+                        }
+                        rightRow.appendChild(rightDot);
+                    } else if (dotType === 'B') {
+                        rightRow.appendChild(rightDot);
+                    } else if (dotType === 'C') {
+                        const after = document.createElement('div');
+                        after.style.position = 'absolute';
+                        after.style.width = `${currentDotSize}px`;
+                        after.style.height = `${currentDotSize}px`;
+                        after.style.borderRadius = '50%';
+                        after.style.backgroundColor = 'black';
+                        after.style.top = `${currentDotMargin}px`;
+                        after.style.display = 'block';
+                        rightDot.appendChild(after);
+                        rightDot.classList.add('always-on');
+                        rightDot.dataset.type = 'C';
+                        rightRow.appendChild(rightDot);
+                    } else if (!isNaN(dotType)) {
+                        const after = document.createElement('div');
+                        after.style.position = 'absolute';
+                        after.style.width = `${currentDotSize}px`;
+                        after.style.height = `${currentDotSize}px`;
+                        after.style.borderRadius = '50%';
+                        after.style.backgroundColor = 'black';
+                        after.style.top = `${currentDotMargin}px`;
+                        after.style.display = 'none';
+                        rightDot.appendChild(after);
+                        rightDot.dataset.value = dotType;
+                        rightRow.appendChild(rightDot);
+                    }
+                });
+                rightMatrix.appendChild(rightRow);
+            });
+        }
+
+        function updateDotMatrix() {
+            document.querySelectorAll('.dot[data-value] div').forEach(dot => {
+                dot.style.display = 'none';
+            });
+
+            buttons.forEach(button => {
+                if (button.classList.contains('selected')) {
+                    const value = button.value;
+                    document.querySelectorAll(`.dot[data-value="${value}"] div`).forEach(dot => {
+                        dot.style.display = 'block';
+                    });
+                }
+            });
+        }
+
+        function updateDotStyle() {
+            const newSize = parseInt(document.getElementById('dotSize').value);
+            const newMargin = parseFloat(document.getElementById('dotMargin').value);
+
+            if (isNaN(newSize) || newSize < 4 || newSize > 20) {
+                alert("点大小必须在4-20之间");
+                return;
+            }
+            if (isNaN(newMargin) || newMargin < 0 || newMargin > 10) {
+                alert("点间距必须在0-10之间");
+                return;
+            }
+
+            currentDotSize = newSize;
+            currentDotMargin = newMargin;
+
+            initializeDotMatrix();
+            updateDotMatrix();
+        }
+
+        buttons.forEach(button => {
+            button.addEventListener('click', function() {
+                const value = parseInt(this.value);
+                const isSelected = this.classList.contains('selected');
+
+                if (isSelected) {
+                    total -= value;
+                    this.classList.remove('selected');
+                } else {
+                    total += value;
+                    this.classList.add('selected');
+                }
+
+                sumDisplay.textContent = total;
+                targetSumInput.value = total;
+                updateDotMatrix();
+            });
+        });
+
+        function highlightButtons() {
+            const targetSum = parseInt(targetSumInput.value);
+            if (isNaN(targetSum)) {
+                alert("请输入有效的数字");
+                return;
+            }
+
+            buttons.forEach(button => {
+                button.classList.remove('selected');
+            });
+            total = 0;
+            sumDisplay.textContent = total;
+
+            const sortedButtons = Array.from(buttons)
+                .map(btn => ({element: btn, value: parseInt(btn.value)}))
+                .sort((a, b) => b.value - a.value);
+
+            let remaining = targetSum;
+            for (const btn of sortedButtons) {
+                if (btn.value === 0) continue;
+                if (btn.value <= remaining) {
+                    btn.element.classList.add('selected');
+                    remaining -= btn.value;
+                    total += btn.value;
+                }
+            }
+
+            sumDisplay.textContent = total;
+            targetSumInput.value = total;
+            updateDotMatrix();
+
+            if (remaining !== 0) {
+                alert(`无法精确匹配，最接近的总和为: ${total}\n剩余差值: ${remaining}`);
+            }
+        }
+
+        const incrementButtons = document.querySelectorAll('.increment');
+        incrementButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const value = parseInt(this.value);
+                const currentSum = parseInt(targetSumInput.value) || 0;
+                const newSum = currentSum + value;
+                targetSumInput.value = newSum;
+                highlightButtons();
+            });
+        });
+
+        // 摄像头相关逻辑
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        async function startCamera() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = videoStream;
+                video.play();
+                canvas.width = 320;
+                canvas.height = 240;
+                processFrameInterval = setInterval(processFrame, 500); // 每500ms处理一帧
+            } catch (err) {
+                alert('无法访问摄像头: ' + err.message);
+            }
+        }
+
+        function stopCamera() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                videoStream = null;
+                clearInterval(processFrameInterval);
+            }
+        }
+
+        // 点阵图数字模板（5x7点阵，0-9）
+        const digitTemplates = {
+            '0': [
+                [1,1,1],
+                [1,0,1],
+                [1,0,1],
+                [1,0,1],
+                [1,0,1],
+                [1,0,1],
+                [1,1,1]
+            ],
+            '1': [
+                [0,1,0],
+                [1,1,0],
+                [0,1,0],
+                [0,1,0],
+                [0,1,0],
+                [0,1,0],
+                [0,1,0]
+            ],
+            '2': [
+                [1,1,1],
+                [0,0,1],
+                [0,0,1],
+                [1,1,1],
+                [1,0,0],
+                [1,0,0],
+                [1,1,1]
+            ],
+            '3': [
+                [1,1,1],
+                [0,0,1],
+                [0,0,1],
+                [1,1,1],
+                [0,0,1],
+                [0,0,1],
+                [1,1,1]
+            ],
+            '4': [
+                [1,0,1],
+                [1,0,1],
+                [1,0,1],
+                [1,1,1],
+                [0,0,1],
+                [0,0,1],
+                [0,0,1]
+            ],
+            '5': [
+                [1,1,1],
+                [1,0,0],
+                [1,0,0],
+                [1,1,1],
+                [0,0,1],
+                [0,0,1],
+                [1,1,1]
+            ],
+            '6': [
+                [1,1,1],
+                [1,0,0],
+                [1,0,0],
+                [1,1,1],
+                [1,0,1],
+                [1,0,1],
+                [1,1,1]
+            ],
+            '7': [
+                [1,1,1],
+                [0,0,1],
+                [0,0,1],
+                [0,0,1],
+                [0,0,1],
+                [0,0,1],
+                [0,0,1]
+            ],
+            '8': [
+                [1,1,1],
+                [1,0,1],
+                [1,0,1],
+                [1,1,1],
+                [1,0,1],
+                [1,0,1],
+                [1,1,1]
+            ],
+            '9': [
+                [1,1,1],
+                [1,0,1],
+                [1,0,1],
+                [1,1,1],
+                [0,0,1],
+                [0,0,1],
+                [1,1,1]
+            ]
+        };
+
+        function processFrame() {
+            if (!video.videoWidth || !video.videoHeight) return;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            let src = cv.imread(canvas);
+            
+            // 预处理：灰度、二值化、形态学膨胀
+            let gray = new cv.Mat();
+            let binary = new cv.Mat();
+            let dilated = new cv.Mat();
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+            cv.threshold(gray, binary, 100, 255, cv.THRESH_BINARY_INV);
+            let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+            cv.dilate(binary, dilated, kernel, new cv.Point(-1, -1), 2);
+
+            // 寻找轮廓
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(dilated, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+            let detectedNumber = '';
+            for (let i = 0; i < contours.size(); i++) {
+                let contour = contours.get(i);
+                let rect = cv.boundingRect(contour);
+                if (rect.width > 20 && rect.height > 40) { // 假设点阵图数字区域
+                    let roi = dilated.roi(rect);
+                    let resized = new cv.Mat();
+                    cv.resize(roi, resized, new cv.Size(30, 70)); // 归一化到5x7点阵大小
+                    let digit = recognizeDigit(resized);
+                    if (digit !== null) {
+                        detectedNumber += digit;
+                    }
+                    roi.delete();
+                    resized.delete();
+                }
+                contour.delete();
+            }
+
+            if (detectedNumber !== '') {
+                targetSumInput.value = parseInt(detectedNumber) || 0;
+                highlightButtons();
+            }
+
+            src.delete();
+            gray.delete();
+            binary.delete();
+            dilated.delete();
+            contours.delete();
+            hierarchy.delete();
+            kernel.delete();
+        }
+
+        function recognizeDigit(mat) {
+            // 将图像转换为5x7二值矩阵
+            let grid = [];
+            for (let i = 0; i < 7; i++) {
+                let row = [];
+                for (let j = 0; j < 3; j++) {
+                    let x = Math.floor(j * mat.cols / 3);
+                    let y = Math.floor(i * mat.rows / 7);
+                    let pixel = mat.ucharPtr(y, x)[0];
+                    row.push(pixel > 128 ? 1 : 0);
+                }
+                grid.push(row);
+            }
+
+            // 模板匹配
+            let maxScore = -1;
+            let bestDigit = null;
+            for (let digit in digitTemplates) {
+                let template = digitTemplates[digit];
+                let score = 0;
+                for (let i = 0; i < 7; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        if (grid[i][j] === template[i][j]) {
+                            score++;
+                        }
+                    }
+                }
+                let matchScore = score / (7 * 3);
+                if (matchScore > maxScore && matchScore > 0.8) { // 阈值0.8
+                    maxScore = matchScore;
+                    bestDigit = digit;
+                }
+            }
+            return bestDigit;
+        }
+
+        // 等待OpenCV.js加载
+        cv.onRuntimeInitialized = () => {
+            initializeDotMatrix();
+        };
+    </script>
+</body>
+</html>
