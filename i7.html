@@ -101,20 +101,20 @@
         .dot-row {
             display: flex;
             justify-content: center;
-            height: 12px; /* 将被JavaScript覆盖 */
+            height: 12px;
         }
         .dot {
-            width: 10px; /* 将被JavaScript覆盖 */
-            height: 10px; /* 将被JavaScript覆盖 */
-            margin: 1px; /* 将被JavaScript覆盖 */
+            width: 10px;
+            height: 10px;
+            margin: 1px;
             background-color: transparent;
             position: relative;
         }
         .dot::after {
             content: '';
             position: absolute;
-            width: 10px; /* 将被JavaScript覆盖 */
-            height: 10px; /* 将被JavaScript覆盖 */
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background-color: black;
             display: none;
@@ -123,7 +123,7 @@
             display: block;
         }
         .dot.always-on::after {
-            display: none !important; /* 防止C点伪元素显示 */
+            display: none !important;
         }
         .adjustment-container {
             max-width: 800px;
@@ -465,21 +465,30 @@
             });
         });
 
-        // 摄像头相关逻辑
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
 
         async function startCamera() {
             try {
-                videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('getUserMedia not supported in this browser');
+                }
+                videoStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        facingMode: 'environment', // 使用后置摄像头
+                        width: { ideal: 320 },
+                        height: { ideal: 240 }
+                    }
+                });
                 video.srcObject = videoStream;
                 video.play();
                 canvas.width = 320;
                 canvas.height = 240;
-                processFrameInterval = setInterval(processFrame, 500); // 每500ms处理一帧
+                processFrameInterval = setInterval(processFrame, 500);
             } catch (err) {
-                alert('无法访问摄像头: ' + err.message);
+                console.error('Camera error:', err);
+                alert(`无法访问摄像头: ${err.name} - ${err.message}`);
             }
         }
 
@@ -492,7 +501,6 @@
             }
         }
 
-        // 点阵图数字模板（5x7点阵，0-9）
         const digitTemplates = {
             '0': [
                 [1,1,1],
@@ -591,7 +599,6 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             let src = cv.imread(canvas);
             
-            // 预处理：灰度、二值化、形态学膨胀
             let gray = new cv.Mat();
             let binary = new cv.Mat();
             let dilated = new cv.Mat();
@@ -600,7 +607,6 @@
             let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
             cv.dilate(binary, dilated, kernel, new cv.Point(-1, -1), 2);
 
-            // 寻找轮廓
             let contours = new cv.MatVector();
             let hierarchy = new cv.Mat();
             cv.findContours(dilated, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
@@ -609,10 +615,10 @@
             for (let i = 0; i < contours.size(); i++) {
                 let contour = contours.get(i);
                 let rect = cv.boundingRect(contour);
-                if (rect.width > 20 && rect.height > 40) { // 假设点阵图数字区域
+                if (rect.width > 20 && rect.height > 40) {
                     let roi = dilated.roi(rect);
                     let resized = new cv.Mat();
-                    cv.resize(roi, resized, new cv.Size(30, 70)); // 归一化到5x7点阵大小
+                    cv.resize(roi, resized, new cv.Size(30, 70));
                     let digit = recognizeDigit(resized);
                     if (digit !== null) {
                         detectedNumber += digit;
@@ -638,7 +644,6 @@
         }
 
         function recognizeDigit(mat) {
-            // 将图像转换为5x7二值矩阵
             let grid = [];
             for (let i = 0; i < 7; i++) {
                 let row = [];
@@ -651,7 +656,6 @@
                 grid.push(row);
             }
 
-            // 模板匹配
             let maxScore = -1;
             let bestDigit = null;
             for (let digit in digitTemplates) {
@@ -665,7 +669,7 @@
                     }
                 }
                 let matchScore = score / (7 * 3);
-                if (matchScore > maxScore && matchScore > 0.8) { // 阈值0.8
+                if (matchScore > maxScore && matchScore > 0.8) {
                     maxScore = matchScore;
                     bestDigit = digit;
                 }
@@ -673,7 +677,6 @@
             return bestDigit;
         }
 
-        // 等待OpenCV.js加载
         cv.onRuntimeInitialized = () => {
             initializeDotMatrix();
         };
